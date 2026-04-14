@@ -22,14 +22,18 @@ export function TooltipPopover({
       <div className="cl-tooltip__rows">
         {rows.map((row) => (
           <div className="cl-tooltip__row" key={`${row.label}-${row.value}`}>
-            <div className="cl-legend__item">
-              <LegendMarker
-                color={row.color}
-                strokeColor={row.strokeColor}
-                marker={row.marker}
-              />
+            {row.color ? (
+              <div className="cl-legend__item">
+                <LegendMarker
+                  color={row.color}
+                  strokeColor={row.strokeColor}
+                  marker={row.marker}
+                />
+                <span>{row.label}</span>
+              </div>
+            ) : (
               <span>{row.label}</span>
-            </div>
+            )}
             <div className="cl-tooltip__value">{row.value}</div>
           </div>
         ))}

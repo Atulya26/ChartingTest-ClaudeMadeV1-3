@@ -27,7 +27,8 @@ function makeCategory(category: string): NonNullable<InputType['table']> {
 export function booleanArg(
   description: string,
   category = 'Display',
-  conditional?: ConditionalArg
+  conditional?: ConditionalArg,
+  name?: string
 ) : InputType {
   return {
     control: {
@@ -35,6 +36,7 @@ export function booleanArg(
     },
     description,
     if: conditional,
+    ...(name ? { name } : {}),
     table: {
       ...makeCategory(category),
       type: {
@@ -43,6 +45,16 @@ export function booleanArg(
     },
     type: 'boolean'
   };
+}
+
+export function hoverCardArg(
+  conditional?: ConditionalArg
+): InputType {
+  return booleanArg(
+    'Boolean toggle for the hover helper card.',
+    'Interaction',
+    conditional
+  );
 }
 
 export function numberArg(

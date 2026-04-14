@@ -76,7 +76,7 @@ export interface LineSeriesConfig {
 export interface TooltipRow {
   label: string;
   value: string | number;
-  color: string;
+  color?: string;
   strokeColor?: string;
   marker?: LegendMarkerType;
 }

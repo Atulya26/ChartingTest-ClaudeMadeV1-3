@@ -11,6 +11,7 @@ import {
   fillStyleLabels,
   fillStyleOptions,
   hiddenEventArgTypes,
+  hoverCardArg,
   numberArg,
   selectArg,
   surfaceArgTypes,
@@ -53,6 +54,7 @@ const meta = {
       'select',
       fillLegendMarkerLabels
     ),
+    showHoverCard: hoverCardArg(),
     showTopLabels: booleanArg(
       'Boolean toggle for values above each bin.'
     ),
@@ -92,27 +94,29 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: 'Age Distribution',
+    title: 'PCP Visits Distribution',
     bins: v3HistogramBins,
     legendPosition: 'bottom',
+    showHoverCard: false,
     yAxis: {
-      title: 'Frequency',
-      ticks: ['24', '12', '0']
+      title: 'Members',
+      ticks: ['40', '20', '0']
     }
   }
 };
 
 export const WithOverlay: Story = {
   args: {
-    title: 'Age Distribution',
+    title: 'PCP Visits Distribution',
     bins: v3HistogramBins,
     overlayLine: true,
     overlayDots: true,
     overlayAreaFill: true,
-    overlayLegendLabel: 'Distribution curve',
+    overlayLegendLabel: 'Expected distribution',
+    showHoverCard: false,
     yAxis: {
-      title: 'Frequency',
-      ticks: ['24', '12', '0']
+      title: 'Members',
+      ticks: ['40', '20', '0']
     }
   }
 };

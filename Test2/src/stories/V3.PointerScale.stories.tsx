@@ -6,6 +6,7 @@ import {
   advancedDataArg,
   baseDocNote,
   hiddenEventArgTypes,
+  hoverCardArg,
   numberArg,
   rangeArg,
   surfaceArgTypes,
@@ -49,7 +50,8 @@ const meta = {
       'Maximum scale value.',
       'Data',
       { min: 1, max: 200, step: 1 }
-    )
+    ),
+    showHoverCard: hoverCardArg()
   }
 } satisfies Meta<typeof PointerScaleV3>;
 
@@ -59,10 +61,12 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: 'Risk Score',
-    value: 58,
-    target: 70,
+    title: 'HHSCC Risk Score',
+    value: 23,
+    target: 20,
+    centerLabel: '0.23',
     ranges: v3PointerRanges,
+    showHoverCard: false,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true,
     showLegend: true

@@ -1,4 +1,4 @@
-import { Fragment, useId } from 'react';
+import { Fragment, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { XAxis, YAxis } from '../../primitives/Axis';
@@ -6,6 +6,8 @@ import { GridLines } from '../../primitives/GridLines';
 import { chartTokens } from '../../theme/tokens';
 import { formatNumberCompact } from '../../utils/chart';
 import { withAlpha } from '../../utils/color';
+import type { TooltipRow } from '../../types';
+import { ChartHoverCardV3 } from '../components/ChartHoverCardV3';
 import { ChartShellV3 } from '../components/ChartShellV3';
 import type {
   AxisConfigV3,
@@ -21,7 +23,11 @@ import {
   createInvertedScale,
   describeAreaPath,
   describeLinePath,
+  formatTooltipValue,
   getDotRadius,
+  getEstimatedHoverCardHeight,
+  getHoverIndex,
+  getViewportHoverCardPosition,
   getSvgFillDefinition,
   getValueExtent,
   resolveFillLegendMarker,
@@ -50,6 +56,7 @@ export interface HistogramChartV3Props extends V3HeaderProps {
   fillStyle?: FillStyleModeV3;
   legendMarker?: LegendMarkerModeV3;
   overlayLegendLabel?: string;
+  showHoverCard?: boolean;
 }
 
 export function HistogramChartV3({
@@ -73,8 +80,11 @@ export function HistogramChartV3({
   fillStyle = 'inherit',
   legendMarker = 'auto',
   overlayLegendLabel = 'Overlay line',
+  showHoverCard = false,
   ...headerProps
 }: HistogramChartV3Props) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const svgId = useId().replace(/:/g, '');
   const resolvedBins = bins.map((bin, index) =>
     resolveHistogramBin(bin, index, fillStyle)
@@ -184,10 +194,15 @@ export function HistogramChartV3({
     plotHeight,
     extent.min,
     extent.max
-  ).map((point, index) => ({
+  ).map((point) => ({
     ...point,
     x: point.x + barWidth / 2
   }));
+  const hoveredBin = hoveredIndex !== null ? resolvedBins[hoveredIndex] : null;
+  const hoverCardPosition =
+    hoveredIndex !== null && mousePos
+      ? getViewportHoverCardPosition(mousePos.x, mousePos.y, 196, getEstimatedHoverCardHeight(overlayLine ? 2 : 1))
+      : null;
 
   return (
     <ChartShellV3
@@ -223,48 +238,119 @@ export function HistogramChartV3({
                   color={grid?.color}
                 />
               ) : null}
-              <svg
-                width={plotWidth}
-                height={plotHeight}
-                viewBox={`0 0 ${plotWidth} ${plotHeight}`}
-                role="img"
-                aria-label={title}
-                style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+              <div
+                style={{ position: 'relative', width: plotWidth, height: plotHeight }}
+                onMouseMove={
+                  showHoverCard
+                    ? (event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setHoveredIndex(
+                          getHoverIndex(
+                            event.clientX - rect.left,
+                            plotWidth,
+                            resolvedBins.length
+                          )
+                        );
+                        setMousePos({ x: event.clientX, y: event.clientY });
+                      }
+                    : undefined
+                }
+                onMouseLeave={
+                  showHoverCard ? () => { setHoveredIndex(null); setMousePos(null); } : undefined
+                }
               >
-                <defs>{defs}</defs>
-                {barLayers}
-                {showTopLabels ? labelLayers : null}
-                {overlayLine ? (
-                  <Fragment>
-                    {overlayAreaFill ? (
-                      <path
-                        d={describeAreaPath(overlayPoints, zeroY)}
-                        fill={withAlpha(chartTokens.categorical.secondary, 0.14)}
-                        stroke="none"
-                      />
-                    ) : null}
-                    <path
-                      d={describeLinePath(overlayPoints)}
-                      fill="none"
-                      stroke={chartTokens.categorical.secondary}
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                <svg
+                  width={plotWidth}
+                  height={plotHeight}
+                  viewBox={`0 0 ${plotWidth} ${plotHeight}`}
+                  role="img"
+                  aria-label={title}
+                  style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+                >
+                  <defs>{defs}</defs>
+                  {showHoverCard && hoveredIndex !== null ? (
+                    <rect
+                      x={hoveredIndex * barWidth}
+                      y={0}
+                      width={barWidth}
+                      height={plotHeight}
+                      fill={chartTokens.neutral.surfaceTint}
+                      opacity={0.4}
                     />
-                    {overlayDots
-                      ? overlayPoints.map((point, index) => (
-                          <circle
-                            key={`dot-${index}`}
-                            cx={point.x}
-                            cy={point.y}
-                            r={getDotRadius('medium')}
-                            fill={chartTokens.categorical.secondary}
-                          />
-                        ))
-                      : null}
-                  </Fragment>
+                  ) : null}
+                  {barLayers}
+                  {showTopLabels ? labelLayers : null}
+                  {overlayLine ? (
+                    <Fragment>
+                      {overlayAreaFill ? (
+                        <path
+                          d={describeAreaPath(overlayPoints, zeroY)}
+                          fill={withAlpha(chartTokens.categorical.secondary, 0.14)}
+                          stroke="none"
+                        />
+                      ) : null}
+                      <path
+                        d={describeLinePath(overlayPoints)}
+                        fill="none"
+                        stroke={chartTokens.categorical.secondary}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      {overlayDots
+                        ? overlayPoints.map((point, index) => (
+                            <circle
+                              key={`dot-${index}`}
+                              cx={point.x}
+                              cy={point.y}
+                              r={getDotRadius('medium')}
+                              fill="#ffffff"
+                              stroke={chartTokens.categorical.secondary}
+                              strokeWidth={2}
+                            />
+                          ))
+                        : null}
+                    </Fragment>
+                  ) : null}
+                </svg>
+                {showHoverCard && hoveredIndex !== null ? (
+                  <ChartHoverCardV3
+                    title={resolvedBins[hoveredIndex].label}
+                    rows={[
+                      {
+                        label:
+                          resolvedBins[hoveredIndex].legendLabel ??
+                          'Observed distribution',
+                        value: formatTooltipValue(
+                          resolvedBins[hoveredIndex].value
+                        ),
+                        color: resolvedBins[hoveredIndex].fill,
+                        strokeColor: resolvedBins[hoveredIndex].stroke,
+                        marker: resolveFillLegendMarker(
+                          resolvedBins[hoveredIndex].fillStyle,
+                          legendMarker
+                        ) as TooltipRow['marker']
+                      },
+                      ...(overlayLine
+                        ? ([
+                            {
+                              label: overlayLegendLabel,
+                              value: formatTooltipValue(
+                                overlayPoints[hoveredIndex]?.value ??
+                                  resolvedBins[hoveredIndex].value
+                              ),
+                              color: chartTokens.categorical.secondary,
+                              strokeColor: chartTokens.categorical.secondary,
+                              marker: (overlayDots ? 'dot-line' : 'line') as TooltipRow['marker']
+                            }
+                          ] satisfies TooltipRow[])
+                        : [])
+                    ] satisfies TooltipRow[]}
+                    left={hoverCardPosition?.left ?? 12}
+                    top={hoverCardPosition?.top ?? 12}
+                  />
                 ) : null}
-              </svg>
+              </div>
             </div>
             <div
               style={{

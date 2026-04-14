@@ -1,10 +1,17 @@
+import { useState } from 'react';
+
 import { chartTokens } from '../../theme/tokens';
+import { ChartHoverCardV3 } from '../components/ChartHoverCardV3';
 import { ChartShellV3 } from '../components/ChartShellV3';
 import type { GaugeRangeV3, LegendPositionV3, V3HeaderProps } from '../types';
 import {
   clamp,
   describeArcSegment,
-  mapValueToAngle
+  formatTooltipValue,
+  getEstimatedHoverCardHeight,
+  getViewportHoverCardPosition,
+  mapValueToAngle,
+  polarToCartesian
 } from '../utils';
 
 export interface GaugeChartV3Props extends V3HeaderProps {
@@ -30,12 +37,11 @@ export interface GaugeChartV3Props extends V3HeaderProps {
   sweepAngle?: number;
   showLegend?: boolean;
   legendPosition?: LegendPositionV3;
+  showHoverCard?: boolean;
 }
 
 const defaultGaugeRanges: GaugeRangeV3[] = [
-  { from: 0, to: 60, color: chartTokens.sequential.red.dark },
-  { from: 60, to: 80, color: chartTokens.sequential.warning.default },
-  { from: 80, to: 100, color: chartTokens.sequential.success.dark }
+  { from: 0, to: 100, color: chartTokens.multiHue.donutBlue, label: 'Current' }
 ];
 
 export function GaugeChartV3({
@@ -61,8 +67,11 @@ export function GaugeChartV3({
   sweepAngle = 180,
   showLegend = false,
   legendPosition = 'bottom',
+  showHoverCard = false,
   ...headerProps
 }: GaugeChartV3Props) {
+  const [hovered, setHovered] = useState(false);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const centerX = size / 2;
   const centerY = size * 0.55;
   const radius = size * 0.40;
@@ -76,6 +85,35 @@ export function GaugeChartV3({
     clampedValue <= min
       ? null
       : describeArcSegment(centerX, centerY, radius, startAngle, valueAngle);
+  const hoverRows = [
+    {
+      label: 'Current',
+      value: centerLabel ?? formatTooltipValue(clampedValue),
+      color: valueColor ?? activeRange.color,
+      marker: 'solid' as const
+    },
+    ...(centerSubLabel
+      ? [
+          {
+            label: 'Context',
+            value: centerSubLabel
+          }
+        ]
+      : []),
+    {
+      label: 'Band',
+      value: activeRange.label ?? `${activeRange.from}-${activeRange.to}`,
+      color: activeRange.color,
+      marker: 'solid' as const
+    },
+    {
+      label: 'Scale',
+      value: `${leftLabel ?? min} - ${rightLabel ?? max}`
+    }
+  ];
+  const hoverCardPosition = mousePos
+    ? getViewportHoverCardPosition(mousePos.x, mousePos.y, 196, getEstimatedHoverCardHeight(hoverRows.length))
+    : null;
 
   const legendItems = showLegend ? ranges.map(range => ({
     label: range.label ?? `${range.from}-${range.to}`,
@@ -96,7 +134,12 @@ export function GaugeChartV3({
       legendPosition={legendPosition}
       {...headerProps}
     >
-      <div className="cl-v3-gauge">
+      <div
+        className="cl-v3-gauge"
+        style={{ position: 'relative', width: size, margin: '0 auto' }}
+        onMouseMove={showHoverCard ? (event) => { setHovered(true); setMousePos({ x: event.clientX, y: event.clientY }); } : undefined}
+        onMouseLeave={showHoverCard ? () => { setHovered(false); setMousePos(null); } : undefined}
+      >
         <svg
           width={size}
           height={size * 0.68}
@@ -166,6 +209,14 @@ export function GaugeChartV3({
             {rightLabel ?? `${max}`}
           </text>
         </svg>
+        {showHoverCard && hovered ? (
+          <ChartHoverCardV3
+            title={title}
+            rows={hoverRows}
+            left={hoverCardPosition?.left ?? 0}
+            top={hoverCardPosition?.top ?? 0}
+          />
+        ) : null}
       </div>
     </ChartShellV3>
   );

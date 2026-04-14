@@ -8,6 +8,7 @@ import {
   booleanArg,
   colorArg,
   hiddenEventArgTypes,
+  hoverCardArg,
   numberArg,
   rangeArg,
   surfaceArgTypes,
@@ -51,6 +52,7 @@ const meta = {
       'Boolean toggle for rounded arc ends.',
       'Style'
     ),
+    showHoverCard: hoverCardArg(),
     size: rangeArg(
       'Overall gauge size in pixels.',
       'Layout',
@@ -82,10 +84,11 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     title: 'Inpatient follow up',
-    value: 45,
-    centerLabel: '45%',
-    centerSubLabel: '845 of 1,190',
+    value: 46,
+    centerLabel: '46%',
+    centerSubLabel: '(891 of 1,937)',
     ranges: v3GaugeRanges,
+    showHoverCard: false,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true
   }
@@ -93,12 +96,13 @@ export const Default: Story = {
 
 export const WithLegend: Story = {
   args: {
-    title: 'Inpatient follow up',
-    value: 45,
-    centerLabel: '45%',
-    centerSubLabel: '845 of 1,190',
+    title: 'ED Outreach',
+    value: 71,
+    centerLabel: '71%',
+    centerSubLabel: '(845 of 1,190)',
     ranges: v3GaugeRanges,
     showLegend: true,
+    showHoverCard: false,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true
   }
@@ -106,12 +110,12 @@ export const WithLegend: Story = {
 
 export const CustomAngles: Story = {
   args: {
-    title: 'Three-quarter donut',
-    value: 65,
-    centerLabel: '65%',
-    centerSubLabel: '780 of 1,200',
+    title: 'Diabetes A1c control',
+    value: 82,
+    centerLabel: '82%',
+    centerSubLabel: '(600 of 731)',
     ranges: v3GaugeRanges,
-    sweepAngle: 270,
+    showHoverCard: false,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true
   }

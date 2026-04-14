@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { XAxis, YAxis } from '../../primitives/Axis';
@@ -6,6 +6,7 @@ import { GridLines } from '../../primitives/GridLines';
 import { chartTokens } from '../../theme/tokens';
 import { formatNumberCompact } from '../../utils/chart';
 import { withAlpha } from '../../utils/color';
+import { ChartHoverCardV3 } from '../components/ChartHoverCardV3';
 import { ChartShellV3 } from '../components/ChartShellV3';
 import type {
   AxisConfigV3,
@@ -25,8 +26,12 @@ import {
   describeAreaPath,
   describeBarPath,
   describeLinePath,
+  formatTooltipValue,
   getDotRadius,
+  getEstimatedHoverCardHeight,
   getGroupedExtent,
+  getHoverIndex,
+  getViewportHoverCardPosition,
   getStackedExtent,
   getSvgFillDefinition,
   getValueExtent,
@@ -59,6 +64,7 @@ export interface ComboChartV3Props extends V3HeaderProps {
   barCornerRadius?: number;
   barFillStyle?: FillStyleModeV3;
   barLegendMarker?: LegendMarkerModeV3;
+  showHoverCard?: boolean;
 }
 
 function getLineExtent(series: LineSeriesConfigV3[]) {
@@ -90,16 +96,21 @@ export function ComboChartV3({
   barCornerRadius = chartTokens.radii.bar,
   barFillStyle = 'inherit',
   barLegendMarker = 'auto',
+  showHoverCard = false,
   ...headerProps
 }: ComboChartV3Props) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const barLegendItems = buildLegendItemsFromBarSeriesWithOverrides(
+    barSeries,
+    barFillStyle,
+    barLegendMarker
+  );
+  const lineLegendItems = buildLegendItemsFromLineSeries(lineSeries);
   const legendItems = showLegend
     ? [
-        ...buildLegendItemsFromBarSeriesWithOverrides(
-          barSeries,
-          barFillStyle,
-          barLegendMarker
-        ),
-        ...buildLegendItemsFromLineSeries(lineSeries).map((item) => ({
+        ...barLegendItems,
+        ...lineLegendItems.map((item) => ({
           ...item,
           active: showOverlayLine ? item.active : false
         }))
@@ -344,6 +355,81 @@ export function ComboChartV3({
     });
   }
 
+  const hoveredBarRows =
+    hoveredIndex !== null
+      ? barSeries.map((item, index) => {
+          const resolved = resolveBarDatum(
+            item.data[hoveredIndex] ?? 0,
+            item,
+            index,
+            barFillStyle
+          );
+
+          return {
+            label: item.label,
+            value: formatTooltipValue(resolved.value),
+            color: resolved.fill,
+            strokeColor: resolved.stroke,
+            marker: barLegendItems[index]?.marker
+          };
+        })
+      : [];
+  const hoveredLineRows =
+    hoveredIndex !== null && showOverlayLine
+      ? lineSeries.map((item, index) => ({
+          label: item.label,
+          value: formatTooltipValue(item.data[hoveredIndex] ?? 0),
+          color: item.stroke ?? chartTokens.categorical.secondary,
+          strokeColor: item.stroke ?? chartTokens.categorical.secondary,
+          marker: lineLegendItems[index]?.marker
+        }))
+      : [];
+  const hoveredStackTotal =
+    hoveredIndex !== null && barLayout === 'stacked'
+      ? barSeries.reduce(
+          (sum, item, index) =>
+            sum +
+            resolveBarDatum(
+              item.data[hoveredIndex] ?? 0,
+              item,
+              index,
+              barFillStyle
+            ).value,
+          0
+        )
+      : undefined;
+  const hoveredLinePoints =
+    hoveredIndex !== null && showOverlayLine
+      ? lineSeries
+          .map((item) => {
+            const extent = item.axis === 'right' ? rightExtent : leftExtent;
+            return buildLinePoints(
+              item.data,
+              plotWidth,
+              plotHeight,
+              extent.min,
+              extent.max,
+              12
+            )[hoveredIndex];
+          })
+          .filter(
+            (point): point is { x: number; y: number; value: number; index: number } =>
+              Boolean(point)
+          )
+      : [];
+  const hoverCardPosition =
+    hoveredIndex !== null && mousePos
+      ? getViewportHoverCardPosition(
+          mousePos.x,
+          mousePos.y,
+          196,
+          getEstimatedHoverCardHeight(
+            hoveredBarRows.length + hoveredLineRows.length,
+            typeof hoveredStackTotal === 'number'
+          )
+        )
+      : null;
+
   return (
     <ChartShellV3
       width={width}
@@ -378,26 +464,114 @@ export function ComboChartV3({
                   color={grid?.color}
                 />
               ) : null}
-              <svg
-                width={plotWidth}
-                height={plotHeight}
-                viewBox={`0 0 ${plotWidth} ${plotHeight}`}
-                role="img"
-                aria-label={title}
-                style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+              <div
+                style={{ position: 'relative', width: plotWidth, height: plotHeight }}
+                onMouseMove={
+                  showHoverCard
+                    ? (event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setHoveredIndex(
+                          getHoverIndex(
+                            event.clientX - rect.left,
+                            plotWidth,
+                            categories.length
+                          )
+                        );
+                        setMousePos({ x: event.clientX, y: event.clientY });
+                      }
+                    : undefined
+                }
+                onMouseLeave={
+                  showHoverCard ? () => { setHoveredIndex(null); setMousePos(null); } : undefined
+                }
               >
-                <defs>{defs}</defs>
-                <line
-                  x1="0"
-                  y1={zeroY}
-                  x2={plotWidth}
-                  y2={zeroY}
-                  stroke={chartTokens.neutral.stoneLight}
-                  strokeWidth="1"
-                />
-                {barLayers}
-                {lineLayers}
-              </svg>
+                <svg
+                  width={plotWidth}
+                  height={plotHeight}
+                  viewBox={`0 0 ${plotWidth} ${plotHeight}`}
+                  role="img"
+                  aria-label={title}
+                  style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+                >
+                  <defs>{defs}</defs>
+                  {showHoverCard && hoveredIndex !== null ? (
+                    <>
+                      <rect
+                        x={hoveredIndex * categoryWidth}
+                        y={0}
+                        width={categoryWidth}
+                        height={plotHeight}
+                        fill={chartTokens.neutral.surfaceTint}
+                        opacity={0.38}
+                      />
+                      <line
+                        x1={hoveredIndex * categoryWidth + categoryWidth / 2}
+                        y1={0}
+                        x2={hoveredIndex * categoryWidth + categoryWidth / 2}
+                        y2={plotHeight}
+                        stroke={chartTokens.neutral.stoneLight}
+                        strokeWidth={1}
+                        strokeDasharray="4 3"
+                      />
+                    </>
+                  ) : null}
+                  <line
+                    x1="0"
+                    y1={zeroY}
+                    x2={plotWidth}
+                    y2={zeroY}
+                    stroke={chartTokens.neutral.stoneLight}
+                    strokeWidth="1"
+                  />
+                  {barLayers}
+                  {lineLayers}
+                  {showHoverCard && hoveredIndex !== null && showOverlayLine
+                    ? lineSeries.map((item) => {
+                        const extent =
+                          item.axis === 'right' ? rightExtent : leftExtent;
+                        const points = buildLinePoints(
+                          item.data,
+                          plotWidth,
+                          plotHeight,
+                          extent.min,
+                          extent.max,
+                          12
+                        );
+                        const point = points[hoveredIndex];
+
+                        if (!point) {
+                          return null;
+                        }
+
+                        return (
+                          <circle
+                            key={`hover-point-${item.key}-${hoveredIndex}`}
+                            cx={point.x}
+                            cy={point.y}
+                            r={getDotRadius(item.dotSize) + 2}
+                            fill="#ffffff"
+                            stroke={item.stroke ?? chartTokens.categorical.secondary}
+                            strokeWidth={2}
+                          />
+                        );
+                      })
+                    : null}
+                </svg>
+                {showHoverCard && hoveredIndex !== null ? (
+                  <ChartHoverCardV3
+                    title={categories[hoveredIndex]}
+                    rows={[...hoveredBarRows, ...hoveredLineRows]}
+                    totalLabel={barLayout === 'stacked' ? 'Bar total' : undefined}
+                    totalValue={
+                      typeof hoveredStackTotal === 'number'
+                        ? formatTooltipValue(hoveredStackTotal)
+                        : undefined
+                    }
+                    left={hoverCardPosition?.left ?? 12}
+                    top={hoverCardPosition?.top ?? 12}
+                  />
+                ) : null}
+              </div>
             </div>
             <div
               style={{

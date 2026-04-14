@@ -57,6 +57,140 @@ export function resolveFillLegendMarker(
   return legendMarker === 'auto' ? getFillLegendMarker(fillStyle) : legendMarker;
 }
 
+export function getLineLegendMarker(item: LineSeriesConfigV3) {
+  if (item.showDots === false) {
+    return item.lineStyle === 'dashed'
+      ? ('line-dashed' as const)
+      : ('line' as const);
+  }
+
+  return item.lineStyle === 'dashed'
+    ? ('dot-line-dashed' as const)
+    : ('dot-line' as const);
+}
+
+export function formatTooltipValue(value: number) {
+  const isWholeNumber = Math.abs(value - Math.round(value)) < 0.001;
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: isWholeNumber ? 0 : 1
+  }).format(value);
+}
+
+export function getEstimatedHoverCardHeight(
+  rowCount: number,
+  hasTotalRow = false
+) {
+  return 54 + rowCount * 26 + (hasTotalRow ? 30 : 0);
+}
+
+export interface HoverCardPositionOptions {
+  cardWidth?: number;
+  cardHeight?: number;
+  offset?: number;
+  padding?: number;
+  preferVertical?: 'auto' | 'above' | 'below';
+}
+
+export function getHoverCardPosition(
+  anchorX: number,
+  anchorY: number,
+  boundaryWidth: number,
+  boundaryHeight: number,
+  {
+    cardWidth = 196,
+    cardHeight = 132,
+    offset = 12,
+    padding = 12,
+    preferVertical = 'auto'
+  }: HoverCardPositionOptions = {}
+) {
+  const maxLeft = Math.max(boundaryWidth - cardWidth - padding, padding);
+  const maxTop = Math.max(boundaryHeight - cardHeight - padding, padding);
+  const placeRight = anchorX + offset;
+  const placeLeft = anchorX - cardWidth - offset;
+  const canPlaceRight = placeRight <= maxLeft;
+  const canPlaceLeft = placeLeft >= padding;
+
+  let left: number;
+  if (canPlaceRight && (!canPlaceLeft || anchorX <= boundaryWidth / 2)) {
+    left = placeRight;
+  } else if (canPlaceLeft) {
+    left = placeLeft;
+  } else {
+    left = clamp(anchorX - cardWidth / 2, padding, maxLeft);
+  }
+
+  const placeAbove = anchorY - cardHeight - offset;
+  const placeBelow = anchorY + offset;
+  const canPlaceAbove = placeAbove >= padding;
+  const canPlaceBelow = placeBelow <= maxTop;
+  const preferAbove =
+    preferVertical === 'auto' ? anchorY >= boundaryHeight / 2 : preferVertical === 'above';
+
+  let top: number;
+  if (preferAbove && canPlaceAbove) {
+    top = placeAbove;
+  } else if (!preferAbove && canPlaceBelow) {
+    top = placeBelow;
+  } else if (canPlaceAbove) {
+    top = placeAbove;
+  } else if (canPlaceBelow) {
+    top = placeBelow;
+  } else {
+    top = clamp(anchorY - cardHeight / 2, padding, maxTop);
+  }
+
+  return { left, top };
+}
+
+export function getViewportHoverCardPosition(
+  mouseX: number,
+  mouseY: number,
+  cardWidth = 196,
+  cardHeight = 132,
+  offset = 16
+) {
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const padding = 12;
+
+  let left = mouseX + offset;
+  if (left + cardWidth > vw - padding) {
+    left = mouseX - cardWidth - offset;
+  }
+  left = Math.max(padding, Math.min(left, vw - cardWidth - padding));
+
+  let top = mouseY - cardHeight / 2;
+  top = Math.max(padding, Math.min(top, vh - cardHeight - padding));
+
+  return { left, top };
+}
+
+export function getHoverCardLeft(
+  anchorX: number,
+  boundaryWidth: number,
+  cardWidth = 188,
+  offset = 14
+) {
+  return clamp(anchorX + offset, 12, Math.max(boundaryWidth - cardWidth - 12, 12));
+}
+
+export function getHoverIndex(
+  pointerX: number,
+  plotWidth: number,
+  itemCount: number
+) {
+  if (itemCount <= 1) {
+    return 0;
+  }
+
+  const boundedX = clamp(pointerX, 0, Math.max(plotWidth - 1, 0));
+  return Math.min(
+    itemCount - 1,
+    Math.max(0, Math.floor((boundedX / plotWidth) * itemCount))
+  );
+}
+
 export function resolveBarDatum(
   datum: number | BarDatumV3,
   series: BarSeriesV3,
@@ -421,14 +555,7 @@ export function buildLegendItemsFromLineSeries(series: LineSeriesConfigV3[]) {
     label: item.label,
     color: item.stroke ?? chartTokens.categorical.secondary,
     strokeColor: item.stroke ?? chartTokens.categorical.secondary,
-    marker:
-      item.showDots === false
-        ? item.lineStyle === 'dashed'
-          ? ('line-dashed' as const)
-          : ('line' as const)
-        : item.lineStyle === 'dashed'
-          ? ('dot-line-dashed' as const)
-          : ('dot-line' as const),
+    marker: getLineLegendMarker(item),
     active: item.active
   }));
 }

@@ -159,118 +159,97 @@ export const donutSegments: DonutSegment[] = [
   }
 ];
 
-export const v3BarCategories = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+export const v3BarCategories = ['Commercial', 'Medicaid', 'Medicare'];
 
 export const v3BarSeries: BarSeriesV3[] = [
   {
-    key: 'admissions',
-    label: 'Admissions',
+    key: 'revenue-generated',
+    label: 'Revenue generated',
     fill: chartTokens.categorical.primary,
     stroke: chartTokens.categorical.primary,
-    data: [
-      { value: 34 },
-      { value: 42 },
-      { value: 28 },
-      { value: 51, fill: chartTokens.sequential.warning.default, stroke: chartTokens.sequential.warning.dark },
-      { value: 39 },
-      { value: 45 }
-    ]
+    data: [45, 40, 20]
   },
   {
-    key: 'occupancy',
-    label: 'Occupancy',
-    fill: chartTokens.categorical.axisPalette[2].fill,
-    stroke: chartTokens.categorical.axisPalette[2].stroke,
-    data: [
-      24,
-      { value: 30 },
-      22,
-      33,
-      29,
-      35
-    ]
+    key: 'revenue-targeted',
+    label: 'Revenue targeted',
+    fill: chartTokens.neutral.surfaceTint,
+    stroke: chartTokens.neutral.stoneLight,
+    data: [70, 65, 30]
   }
 ];
+
+export const v3RecaptureCategories = ['18-30', '31-45', '46-60', '61-75', '75+'];
 
 export const v3StackedBarSeries: BarSeriesV3[] = [
   {
-    key: 'medicare',
-    label: 'Medicare',
-    fill: chartTokens.categorical.axisPalette[0].fill,
-    stroke: chartTokens.categorical.axisPalette[0].stroke,
-    data: [28, 24, 20, 26, 22, 25]
+    key: 'female',
+    label: 'Female',
+    fill: chartTokens.sequential.pink.lighter,
+    stroke: chartTokens.sequential.pink.default,
+    data: [12, 15, 28, 34, 33]
   },
   {
-    key: 'commercial',
-    label: 'Commercial',
-    fill: chartTokens.categorical.axisPalette[2].fill,
-    stroke: chartTokens.categorical.axisPalette[2].stroke,
-    data: [18, 16, 24, 18, 20, 19]
-  },
-  {
-    key: 'self-pay',
-    label: 'Self Pay',
-    fill: chartTokens.categorical.axisPalette[4].fill,
-    stroke: chartTokens.categorical.axisPalette[4].stroke,
-    data: [8, 10, 6, 12, 8, 9]
+    key: 'male',
+    label: 'Male',
+    fill: chartTokens.sequential.purple.light,
+    stroke: chartTokens.sequential.purple.default,
+    data: [10, 14, 26, 32, 31]
   }
 ];
 
-export const v3ComboCategories = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6'];
+export const v3ComboCategories = ['0-20', '21-40', '41-60', '61+'];
 
 export const v3ComboBarSeries: BarSeriesV3[] = [
   {
-    key: 'visits',
-    label: 'Visits',
-    fill: chartTokens.categorical.primary,
-    stroke: chartTokens.categorical.primary,
-    data: [48, 56, 42, 64, 58, 67]
+    key: 'female',
+    label: 'Female',
+    fill: chartTokens.sequential.pink.default,
+    stroke: chartTokens.sequential.pink.dark,
+    data: [22000, 51000, 86000, 12000]
   },
   {
-    key: 'discharges',
-    label: 'Discharges',
-    fill: chartTokens.categorical.axisPalette[2].fill,
-    stroke: chartTokens.categorical.axisPalette[2].stroke,
-    data: [24, 28, 22, 30, 27, 31]
+    key: 'male',
+    label: 'Male',
+    fill: chartTokens.categorical.secondary,
+    stroke: chartTokens.categorical.secondary,
+    data: [28000, 57000, 74000, 18000]
+  },
+  {
+    key: 'other',
+    label: 'Other',
+    fill: chartTokens.neutral.stoneLight,
+    stroke: chartTokens.neutral.nightLighter,
+    data: [18000, 43000, 80000, 10000]
   }
 ];
 
 export const v3ComboLineSeries: LineSeriesConfigV3[] = [
   {
-    key: 'trend',
-    label: 'Occupancy trend',
-    data: [58, 62, 60, 68, 72, 74],
-    stroke: chartTokens.categorical.secondary,
+    key: 'revenue-percent',
+    label: 'Revenue %',
+    data: [26, 12.3, 34.7, 27],
+    stroke: chartTokens.text.default,
     showDots: true,
     showLabels: true,
-    axis: 'right'
-  },
-  {
-    key: 'benchmark',
-    label: 'Benchmark',
-    data: [50, 50, 50, 52, 52, 52],
-    stroke: chartTokens.sequential.red.dark,
-    lineStyle: 'dashed',
-    showDots: false,
     axis: 'right'
   }
 ];
 
 export const v3DonutSegments: DonutSegmentV3[] = [
   {
-    label: 'Currently expended amount',
+    label: 'Current',
     value: 70,
     color: chartTokens.multiHue.donutBlue
   },
   {
-    label: 'Forecast for expended amount for the year 2026',
+    label: 'Projected',
     value: 23,
     color: chartTokens.multiHue.donutBlue,
     strokeColor: chartTokens.multiHue.donutBlue,
     fillStyle: 'texture'
   },
   {
-    label: 'Remaining',
+    label: 'Remaining capacity',
     value: 7,
     color: chartTokens.neutral.surfaceTint,
     showLabel: false,
@@ -278,51 +257,52 @@ export const v3DonutSegments: DonutSegmentV3[] = [
   }
 ];
 
-export const v3LineCategories = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+export const v3LineCategories = ["Q1 '23", "Q2 '23", "Q3 '23", "Q4 '23"];
 
 export const v3LineSeries: LineSeriesConfigV3[] = [
   {
-    key: 'readmission',
-    label: 'Readmission rate',
-    data: [24, 28, 32, 26, 34, 38],
-    stroke: chartTokens.categorical.secondary,
+    key: 'current',
+    label: 'Current',
+    data: [1077, 1063, 1047, 1047],
+    stroke: chartTokens.sequential.warning.default,
     showDots: true,
     showLabels: true
   },
   {
-    key: 'target',
-    label: 'Target',
-    data: [30, 30, 30, 30, 30, 30],
-    stroke: chartTokens.sequential.red.dark,
+    key: 'ye-projected',
+    label: 'YE Projected',
+    data: [1077, 1063, 1047, 1052],
+    stroke: chartTokens.sequential.warning.default,
     lineStyle: 'dashed',
     showDots: false
   }
 ];
 
 export const v3HistogramBins: HistogramBinV3[] = [
-  { label: '0-10', value: 8, fill: chartTokens.sequential.default.lightest, stroke: chartTokens.sequential.default.dark, legendLabel: 'Observed distribution' },
-  { label: '10-20', value: 12, fill: chartTokens.sequential.default.lighter, stroke: chartTokens.sequential.default.dark, legendLabel: 'Observed distribution' },
-  { label: '20-30', value: 18, fill: chartTokens.sequential.default.light, stroke: chartTokens.sequential.default.dark, legendLabel: 'Observed distribution' },
-  { label: '30-40', value: 22, fill: chartTokens.sequential.default.default, stroke: chartTokens.sequential.default.dark, legendLabel: 'Observed distribution' },
-  { label: '40-50', value: 15, fill: chartTokens.sequential.default.dark, stroke: chartTokens.sequential.default.darker, legendLabel: 'Observed distribution' },
-  { label: '50-60', value: 9, fill: chartTokens.sequential.default.dark, stroke: chartTokens.sequential.default.darker, fillStyle: 'texture', legendLabel: 'Forecast distribution' }
+  { label: '0', value: 8, fill: chartTokens.sequential.default.lightest, stroke: chartTokens.sequential.default.dark, legendLabel: 'Observed distribution' },
+  { label: '1-5', value: 24, fill: chartTokens.sequential.default.lighter, stroke: chartTokens.sequential.default.dark, legendLabel: 'Observed distribution' },
+  { label: '6-10', value: 37, fill: chartTokens.sequential.default.light, stroke: chartTokens.sequential.default.dark, legendLabel: 'Observed distribution' },
+  { label: '11-20', value: 18, fill: chartTokens.sequential.default.default, stroke: chartTokens.sequential.default.dark, legendLabel: 'Observed distribution' },
+  { label: '21-30', value: 12, fill: chartTokens.sequential.default.dark, stroke: chartTokens.sequential.default.darker, legendLabel: 'Observed distribution' },
+  { label: '31+', value: 9, fill: chartTokens.sequential.default.darker, stroke: chartTokens.sequential.default.darker, legendLabel: 'Observed distribution' }
 ];
 
-export const v3SparklineValues = [14, 18, 12, 22, 20, 28, 24];
+export const v3SparklineValues = [1028, 1036, 1041, 1033, 1047, 1052, 1048];
+export const v3SparklineLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
 
 export const v3GaugeRanges: GaugeRangeV3[] = [
-  { from: 0, to: 60, color: chartTokens.sequential.red.dark },
-  { from: 60, to: 80, color: chartTokens.sequential.warning.default },
-  { from: 80, to: 100, color: chartTokens.sequential.success.dark }
+  { from: 0, to: 30, color: chartTokens.sequential.red.dark, label: 'Needs attention' },
+  { from: 30, to: 50, color: chartTokens.sequential.warning.default, label: 'Watch list' },
+  { from: 50, to: 100, color: chartTokens.sequential.success.dark, label: 'On track' }
 ];
 
 export const v3PointerRanges: PointerScaleRangeV3[] = [
-  { from: 0, to: 33.33, color: chartTokens.sequential.red.dark, label: 'Low' },
-  { from: 33.33, to: 66.66, color: chartTokens.sequential.warning.default, label: 'Medium' },
-  { from: 66.66, to: 100, color: chartTokens.sequential.success.dark, label: 'High' }
+  { from: 0, to: 10, color: chartTokens.neutral.stoneLight, label: 'Low' },
+  { from: 10, to: 20, color: chartTokens.sequential.warning.default, label: 'Medium' },
+  { from: 20, to: 100, color: chartTokens.sequential.red.dark, label: 'High' }
 ];
 
-export const v3MapBubblePoints: MapBubblePointV3[] = [
+const baseV3MapBubblePoints: MapBubblePointV3[] = [
   {
     key: 'seattle',
     label: 'Seattle',
@@ -535,8 +515,57 @@ export const v3MapBubblePoints: MapBubblePointV3[] = [
   }
 ];
 
+const bubbleDetailByLegendLabel: Record<string, { costBase: number; avoidableBase: number }> = {
+  Hospital: { costBase: 28400000, avoidableBase: 31.2 },
+  'Affiliated ASC': { costBase: 12100000, avoidableBase: 18.4 },
+  'Non-affiliated ASC': { costBase: 9400000, avoidableBase: 25.1 }
+};
+
+export const v3MapBubblePoints: MapBubblePointV3[] = baseV3MapBubblePoints.map(
+  (point, index) => {
+    const legendLabel = point.legendLabel ?? 'Hospital';
+    const detailBase =
+      bubbleDetailByLegendLabel[legendLabel] ?? bubbleDetailByLegendLabel.Hospital;
+    const surgeryCost = Math.round(detailBase.costBase + point.value * 312000 + index * 87000);
+    const avoidablePercent = (detailBase.avoidableBase + index * 0.7).toFixed(1);
+
+    return {
+      ...point,
+      details: [
+        { label: 'Network', value: legendLabel },
+        { label: 'State', value: point.stateCode ?? 'US' },
+        {
+          label: 'Surgery cost',
+          value: `$${surgeryCost.toLocaleString('en-US')}`
+        },
+        {
+          label: 'Potential avoidable %',
+          value: `${avoidablePercent}%`
+        }
+      ]
+    };
+  }
+);
+
+export const v3MapBubbleTableConfig = {
+  headers: ['Facility', 'State', 'Network', 'Potential avoidable %'],
+  rows: v3MapBubblePoints.map((point) => [
+    point.label,
+    point.stateCode ?? 'US',
+    point.legendLabel ?? 'Hospital',
+    point.details?.find((detail) => detail.label === 'Potential avoidable %')?.value ?? '0%'
+  ])
+};
+
 export const v3DistributionSegments: DistributionSegmentV3[] = [
   { label: 'Less than $5,000', value: 55, fill: '#8798d7' },
   { label: '$5,000 to $10,000', value: 35, fill: '#db7d46' },
   { label: 'More than $10,000', value: 10, fill: '#c93030' }
+];
+
+export const v3RiskDistributionSegments: DistributionSegmentV3[] = [
+  { label: 'Low', value: 35, fill: chartTokens.sequential.neel.default },
+  { label: 'Medium', value: 25, fill: '#f1d4c6' },
+  { label: 'High', value: 20, fill: '#e29a80' },
+  { label: 'Very High', value: 10, fill: '#cd6c4c' }
 ];

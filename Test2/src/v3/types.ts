@@ -13,6 +13,11 @@ export type FillStyleModeV3 = FillStyle | 'inherit';
 export type LegendMarkerModeV3 = LegendMarkerType | 'auto';
 export type BubbleStyleV3 = 'filled' | 'outlined' | 'both';
 
+export interface DetailRowV3 {
+  label: string;
+  value: string | number;
+}
+
 export interface AxisConfigV3 {
   title?: string;
   ticks?: Array<string | number>;
@@ -119,6 +124,7 @@ export interface MapBubblePointV3 {
   fillStyle?: FillStyle;
   bubbleStyle?: BubbleStyleV3;
   active?: boolean;
+  details?: DetailRowV3[];
 }
 
 export interface DistributionSegmentV3 {

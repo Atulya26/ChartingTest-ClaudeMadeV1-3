@@ -6,6 +6,7 @@ import { GridLines } from '../../primitives/GridLines';
 import { chartTokens } from '../../theme/tokens';
 import { formatNumberCompact } from '../../utils/chart';
 import { withAlpha } from '../../utils/color';
+import { ChartHoverCardV3 } from '../components/ChartHoverCardV3';
 import { ChartShellV3 } from '../components/ChartShellV3';
 import type {
   AxisConfigV3,
@@ -22,7 +23,12 @@ import {
   createInvertedScale,
   describeAreaPath,
   describeLinePath,
+  formatTooltipValue,
   getDotRadius,
+  getEstimatedHoverCardHeight,
+  getHoverCardPosition,
+  getHoverIndex,
+  getViewportHoverCardPosition,
   getValueExtent,
   resolveTickEntries
 } from '../utils';
@@ -75,6 +81,7 @@ export function LineChartV3({
   ...headerProps
 }: LineChartV3Props) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const leftSeries = series.filter((item) => item.axis !== 'right');
   const rightSeries = series.filter((item) => item.axis === 'right');
   const leftExtent = getSeriesExtent(leftSeries);
@@ -91,12 +98,11 @@ export function LineChartV3({
     rightExtent.max,
     grid?.count ?? chartTokens.chart.gridLineCount
   );
+  const lineLegendItems = buildLegendItemsFromLineSeries(series);
   const legendItems = showLegend
-    ? [
-        ...buildLegendItemsFromLineSeries(series),
-        ...buildReferenceLegend(referenceLines)
-      ]
+    ? [...lineLegendItems, ...buildReferenceLegend(referenceLines)]
     : [];
+  const categoryWidth = plotWidth / Math.max(categories.length, 1);
   const referenceLayers: ReactNode[] = [];
   const lineLayers: ReactNode[] = [];
 
@@ -207,6 +213,30 @@ export function LineChartV3({
     });
   });
 
+  const hoveredPoints =
+    hoveredIndex !== null
+      ? series
+          .map((item) => {
+            const extent = item.axis === 'right' ? rightExtent : leftExtent;
+            return buildLinePoints(
+              item.data,
+              plotWidth,
+              plotHeight,
+              extent.min,
+              extent.max,
+              12
+            )[hoveredIndex];
+          })
+          .filter(
+            (point): point is { x: number; y: number; value: number; index: number } =>
+              Boolean(point)
+          )
+      : [];
+  const hoverCardHeight = getEstimatedHoverCardHeight(series.length);
+  const hoverCardPosition = mousePos
+    ? getViewportHoverCardPosition(mousePos.x, mousePos.y, 196, hoverCardHeight)
+    : null;
+
   return (
     <ChartShellV3
       width={width}
@@ -241,7 +271,27 @@ export function LineChartV3({
                   color={grid?.color}
                 />
               ) : null}
-              <div style={{ position: 'relative', width: plotWidth, height: plotHeight }}>
+              <div
+                style={{ position: 'relative', width: plotWidth, height: plotHeight }}
+                onMouseMove={
+                  showHoverCard
+                    ? (event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setHoveredIndex(
+                          getHoverIndex(
+                            event.clientX - rect.left,
+                            plotWidth,
+                            categories.length
+                          )
+                        );
+                        setMousePos({ x: event.clientX, y: event.clientY });
+                      }
+                    : undefined
+                }
+                onMouseLeave={
+                  showHoverCard ? () => { setHoveredIndex(null); setMousePos(null); } : undefined
+                }
+              >
                 <svg
                   width={plotWidth}
                   height={plotHeight}
@@ -250,88 +300,77 @@ export function LineChartV3({
                   aria-label={title}
                   style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
                 >
+                  {showHoverCard && hoveredIndex !== null ? (
+                    <>
+                      <rect
+                        x={hoveredIndex * categoryWidth}
+                        y={0}
+                        width={categoryWidth}
+                        height={plotHeight}
+                        fill={chartTokens.neutral.surfaceTint}
+                        opacity={0.45}
+                      />
+                      <line
+                        x1={hoveredIndex * categoryWidth + categoryWidth / 2}
+                        y1={0}
+                        x2={hoveredIndex * categoryWidth + categoryWidth / 2}
+                        y2={plotHeight}
+                        stroke={chartTokens.neutral.stoneLight}
+                        strokeWidth={1}
+                        strokeDasharray="4 3"
+                      />
+                    </>
+                  ) : null}
                   {referenceLayers}
                   {lineLayers}
-                  {showHoverCard && (
-                    <>
-                      {/* Invisible hover columns for each category */}
-                      {categories.map((_, i) => {
-                        const colWidth = plotWidth / categories.length;
-                        const x = i * colWidth;
+                  {showHoverCard && hoveredIndex !== null
+                    ? series.map((item) => {
+                        const extent =
+                          item.axis === 'right' ? rightExtent : leftExtent;
+                        const points = buildLinePoints(
+                          item.data,
+                          plotWidth,
+                          plotHeight,
+                          extent.min,
+                          extent.max,
+                          12
+                        );
+                        const point = points[hoveredIndex];
+
+                        if (!point) {
+                          return null;
+                        }
+
                         return (
-                          <rect
-                            key={`hover-col-${i}`}
-                            x={x}
-                            y={0}
-                            width={colWidth}
-                            height={plotHeight}
-                            fill="transparent"
-                            onMouseEnter={() => setHoveredIndex(i)}
-                            onMouseLeave={() => setHoveredIndex(null)}
-                            style={{ cursor: 'crosshair' }}
+                          <circle
+                            key={`hover-point-${item.key}-${hoveredIndex}`}
+                            cx={point.x}
+                            cy={point.y}
+                            r={getDotRadius(item.dotSize) + 2}
+                            fill="#ffffff"
+                            stroke={item.stroke ?? chartTokens.categorical.secondary}
+                            strokeWidth={2}
                           />
                         );
-                      })}
-                      {/* Highlight column */}
-                      {hoveredIndex !== null && (
-                        <>
-                          <rect
-                            x={hoveredIndex * (plotWidth / categories.length)}
-                            y={0}
-                            width={plotWidth / categories.length}
-                            height={plotHeight}
-                            fill={chartTokens.neutral.surfaceTint}
-                            opacity={0.5}
-                          />
-                          {/* Vertical indicator line at center of column */}
-                          <line
-                            x1={hoveredIndex * (plotWidth / categories.length) + (plotWidth / categories.length) / 2}
-                            y1={0}
-                            x2={hoveredIndex * (plotWidth / categories.length) + (plotWidth / categories.length) / 2}
-                            y2={plotHeight}
-                            stroke={chartTokens.neutral.stoneLight}
-                            strokeWidth={1}
-                            strokeDasharray="4 3"
-                          />
-                        </>
-                      )}
-                    </>
-                  )}
+                      })
+                    : null}
                 </svg>
-                {showHoverCard && hoveredIndex !== null && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${Math.min(hoveredIndex * (plotWidth / categories.length) + (plotWidth / categories.length) / 2 + 60, plotWidth - 20)}px`,
-                      top: '10px',
-                      background: '#ffffff',
-                      border: `1px solid ${chartTokens.neutral.stoneLight}`,
-                      borderRadius: '4px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                      padding: '8px 12px',
-                      fontSize: '12px',
-                      fontFamily: chartTokens.fontFamily,
-                      zIndex: 10,
-                      minWidth: '120px',
-                      pointerEvents: 'none'
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, marginBottom: '6px', color: chartTokens.text.default }}>
-                      {categories[hoveredIndex]}
-                    </div>
-                    {series.map((s, si) => {
-                      const val = s.data[hoveredIndex];
-                      const numVal = typeof val === 'number' ? val : 0;
-                      return (
-                        <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.stroke ?? chartTokens.categorical.axisPalette[si % 6].stroke, flexShrink: 0 }} />
-                          <span style={{ color: chartTokens.text.subtle, flex: 1 }}>{s.label}</span>
-                          <span style={{ fontWeight: 600, color: chartTokens.text.default }}>{numVal}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                {showHoverCard && hoveredIndex !== null ? (
+                  <ChartHoverCardV3
+                    title={categories[hoveredIndex]}
+                    rows={series.map((item, index) => ({
+                      label: item.label,
+                      value: formatTooltipValue(item.data[hoveredIndex] ?? 0),
+                      color:
+                        item.stroke ?? chartTokens.categorical.secondary,
+                      strokeColor:
+                        item.stroke ?? chartTokens.categorical.secondary,
+                      marker: lineLegendItems[index]?.marker
+                    }))}
+                    left={hoverCardPosition?.left ?? 12}
+                    top={hoverCardPosition?.top ?? 12}
+                  />
+                ) : null}
               </div>
             </div>
             <div

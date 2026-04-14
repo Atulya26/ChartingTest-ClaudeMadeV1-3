@@ -7,6 +7,7 @@ import {
   baseDocNote,
   booleanArg,
   hiddenEventArgTypes,
+  hoverCardArg,
   numberArg,
   surfaceArgTypes,
   v3MetaParameters
@@ -38,9 +39,7 @@ const meta = {
     showSecondaryYAxis: booleanArg(
       'Boolean toggle for the right-side axis.'
     ),
-    showHoverCard: booleanArg(
-      'Boolean toggle for the hover helper card.'
-    ),
+    showHoverCard: hoverCardArg(),
     plotWidth: numberArg(
       'Numeric plot width in pixels.',
       'Layout',
@@ -60,14 +59,22 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: 'Readmission Trend',
+    title: 'Average PMPM Trend',
     categories: v3LineCategories,
     series: v3LineSeries,
     selectOptions,
     selectedValue: selectOptions[1].value,
+    showHoverCard: false,
+    referenceLines: [
+      {
+        value: 1033,
+        label: 'Target',
+        color: '#394cc7'
+      }
+    ],
     yAxis: {
-      title: 'Rate',
-      ticks: ['40', '20', '0']
+      title: 'PMPM',
+      ticks: ['$1,100', '$1,050', '$1,000']
     },
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true
@@ -76,13 +83,13 @@ export const Default: Story = {
 
 export const DualAxis: Story = {
   args: {
-    title: 'Dual Axis Trend',
+    title: 'Monthly census and utilization',
     categories: v3LineCategories,
     series: [
       {
         key: 'census',
         label: 'Census',
-        data: [24, 30, 28, 36, 34, 40],
+        data: [24, 30, 28, 36],
         stroke: '#3bceff',
         showDots: true,
         showAreaFill: true
@@ -90,7 +97,7 @@ export const DualAxis: Story = {
       {
         key: 'utilization',
         label: 'Utilization',
-        data: [58, 62, 60, 68, 64, 74],
+        data: [58, 62, 60, 68],
         stroke: '#c93030',
         lineStyle: 'dashed',
         showDots: false,
@@ -98,6 +105,7 @@ export const DualAxis: Story = {
       }
     ],
     showSecondaryYAxis: true,
+    showHoverCard: false,
     yAxis: {
       title: 'Census',
       ticks: ['40', '20', '0']
@@ -106,17 +114,6 @@ export const DualAxis: Story = {
       title: 'Utilization',
       ticks: ['80', '60', '40']
     },
-    actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
-    showMenu: true
-  }
-};
-
-export const WithHoverCards: Story = {
-  args: {
-    title: 'Readmission Rate',
-    categories: v3LineCategories,
-    series: v3LineSeries,
-    showHoverCard: true,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true
   }

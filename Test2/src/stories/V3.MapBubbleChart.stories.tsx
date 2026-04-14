@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 import { MapBubbleChartV3 } from '../v3/charts/MapBubbleChartV3';
-import { v3MapBubblePoints } from './storyData';
+import { v3MapBubblePoints, v3MapBubbleTableConfig } from './storyData';
 import {
   advancedDataArg,
   baseDocNote,
@@ -12,6 +12,7 @@ import {
   fillStyleLabels,
   fillStyleOptions,
   hiddenEventArgTypes,
+  hoverCardArg,
   numberArg,
   rangeArg,
   selectArg,
@@ -160,6 +161,7 @@ const meta = {
       'Display',
       { arg: 'regionScope', eq: 'state' }
     ),
+    showHoverCard: hoverCardArg({ arg: 'view', eq: 'map' }),
     showBubbleShadow: booleanArg(
       'Boolean toggle for bubble shadow rendering.',
       'Style',
@@ -193,6 +195,7 @@ export const UnitedStatesView: Story = {
     points: v3MapBubblePoints,
     legendPosition: 'bottom',
     showLegend: true,
+    showHoverCard: false,
     showHeader: true,
     showMenu: true,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }]
@@ -201,12 +204,13 @@ export const UnitedStatesView: Story = {
 
 export const FloridaStateView: Story = {
   args: {
-    title: 'Florida Network',
+    title: 'Florida Provider Network',
     points: v3MapBubblePoints,
     regionScope: 'state',
     stateCode: 'FL',
     legendPosition: 'bottom',
     showLegend: true,
+    showHoverCard: false,
     showHeader: true,
     showMenu: true,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }]
@@ -218,6 +222,7 @@ export const TableView: Story = {
     title: 'Hospital Network',
     points: v3MapBubblePoints,
     view: 'table',
+    tableConfig: v3MapBubbleTableConfig,
     showLegend: false,
     showHeader: true,
     showMenu: true,

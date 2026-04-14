@@ -1,10 +1,11 @@
-import { Fragment, useId } from 'react';
+import { Fragment, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { XAxis, YAxis } from '../../primitives/Axis';
 import { GridLines } from '../../primitives/GridLines';
 import { chartTokens } from '../../theme/tokens';
 import { formatNumberCompact } from '../../utils/chart';
+import { ChartHoverCardV3 } from '../components/ChartHoverCardV3';
 import { ChartShellV3 } from '../components/ChartShellV3';
 import type {
   AxisConfigV3,
@@ -20,10 +21,16 @@ import {
   buildLegendItemsFromBarSeriesWithOverrides,
   createInvertedScale,
   describeBarPath,
+  formatTooltipValue,
   getGroupedExtent,
+  getEstimatedHoverCardHeight,
+  getHoverCardPosition,
+  getHoverIndex,
   getStackedExtent,
   getSvgFillDefinition,
+  getViewportHoverCardPosition,
   resolveBarDatum,
+  resolveFillLegendMarker,
   resolveTickEntries
 } from '../utils';
 
@@ -53,6 +60,7 @@ export interface BarChartV3Props extends V3HeaderProps {
   showTotalLabels?: boolean;
   fillStyle?: FillStyleModeV3;
   legendMarker?: LegendMarkerModeV3;
+  showHoverCard?: boolean;
 }
 
 function renderValueLabel(
@@ -104,9 +112,13 @@ export function BarChartV3({
   showTotalLabels = false,
   fillStyle = 'inherit',
   legendMarker = 'auto',
+  showHoverCard = false,
   ...headerProps
 }: BarChartV3Props) {
   const svgId = useId().replace(/:/g, '');
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [hoveredDistributionIndex, setHoveredDistributionIndex] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
   /* ---------- Distribution / horizontal bar mode ---------- */
   if (mode === 'distribution' && distributionSegments?.length) {
@@ -121,6 +133,14 @@ export function BarChartV3({
         ].fill,
       active: true
     }));
+    const hoveredSegment =
+      hoveredDistributionIndex !== null
+        ? distributionSegments[hoveredDistributionIndex]
+        : null;
+    const hoveredDistributionCardHeight = getEstimatedHoverCardHeight(1, true);
+    const hoveredDistributionPosition = mousePos
+      ? getViewportHoverCardPosition(mousePos.x, mousePos.y, 196, hoveredDistributionCardHeight)
+      : null;
 
     return (
       <ChartShellV3
@@ -134,7 +154,7 @@ export function BarChartV3({
         legendPosition={legendPosition}
         {...headerProps}
       >
-        <div style={{ padding: '4px 0' }}>
+        <div style={{ padding: '4px 0', position: 'relative', width: plotWidth }}>
           <div
             style={{
               display: 'flex',
@@ -143,6 +163,9 @@ export function BarChartV3({
               overflow: 'hidden',
               width: plotWidth
             }}
+            onMouseLeave={
+              showHoverCard ? () => { setHoveredDistributionIndex(null); setMousePos(null); } : undefined
+            }
           >
             {distributionSegments.map((seg, i) => {
               const percent = total > 0 ? seg.value / total : 0;
@@ -154,13 +177,23 @@ export function BarChartV3({
               return (
                 <div
                   key={i}
+                  onMouseMove={
+                    showHoverCard
+                      ? (event: React.MouseEvent) => { setHoveredDistributionIndex(i); setMousePos({ x: event.clientX, y: event.clientY }); }
+                      : undefined
+                  }
                   style={{
                     width: `${percent * 100}%`,
                     height: '100%',
                     background: color,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    opacity:
+                      hoveredDistributionIndex === null ||
+                      hoveredDistributionIndex === i
+                        ? 1
+                        : 0.78
                   }}
                 >
                   {percent > 0.08 && (
@@ -202,10 +235,32 @@ export function BarChartV3({
               ))}
             </div>
           )}
+          {showHoverCard && hoveredSegment ? (
+            <ChartHoverCardV3
+              title={hoveredSegment.label}
+              rows={[
+                {
+                  label: 'Share of patients',
+                  value: `${Math.round((hoveredSegment.value / Math.max(total, 1)) * 100)}%`,
+                  color:
+                    hoveredSegment.fill ??
+                    chartTokens.categorical.axisPalette[
+                      hoveredDistributionIndex ?? 0
+                    ].fill,
+                  marker: 'solid'
+                }
+              ]}
+              totalLabel="Band total"
+              totalValue={formatTooltipValue(hoveredSegment.value)}
+              left={hoveredDistributionPosition?.left ?? 12}
+              top={hoveredDistributionPosition?.top ?? 12}
+            />
+          ) : null}
         </div>
       </ChartShellV3>
     );
   }
+
   const legendItems = showLegend
     ? buildLegendItemsFromBarSeriesWithOverrides(series, fillStyle, legendMarker)
     : [];
@@ -396,6 +451,52 @@ export function BarChartV3({
     });
   });
 
+  const hoveredRows =
+    hoveredIndex !== null
+      ? series.map((item, index) => {
+          const resolved = resolveBarDatum(
+            item.data[hoveredIndex] ?? 0,
+            item,
+            index,
+            fillStyle
+          );
+
+          return {
+            label: item.label,
+            value: formatTooltipValue(resolved.value),
+            color: resolved.fill,
+            strokeColor: resolved.stroke,
+            marker: resolveFillLegendMarker(resolved.fillStyle, legendMarker)
+          };
+        })
+      : [];
+  const hoveredStackTotal =
+    hoveredIndex !== null && layout === 'stacked'
+      ? series.reduce(
+          (sum, item, index) =>
+            sum +
+            resolveBarDatum(
+              item.data[hoveredIndex] ?? 0,
+              item,
+              index,
+              fillStyle
+            ).value,
+          0
+        )
+      : undefined;
+  const hoverCardPosition =
+    hoveredIndex !== null && mousePos
+      ? getViewportHoverCardPosition(
+          mousePos.x,
+          mousePos.y,
+          196,
+          getEstimatedHoverCardHeight(
+            hoveredRows.length,
+            typeof hoveredStackTotal === 'number'
+          )
+        )
+      : null;
+
   return (
     <ChartShellV3
       width={width}
@@ -430,26 +531,72 @@ export function BarChartV3({
                   color={grid?.color}
                 />
               ) : null}
-              <svg
-                width={plotWidth}
-                height={plotHeight}
-                viewBox={`0 0 ${plotWidth} ${plotHeight}`}
-                role="img"
-                aria-label={title}
-                style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+              <div
+                style={{ position: 'relative', width: plotWidth, height: plotHeight }}
+                onMouseMove={
+                  showHoverCard
+                    ? (event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setHoveredIndex(
+                          getHoverIndex(
+                            event.clientX - rect.left,
+                            plotWidth,
+                            categories.length
+                          )
+                        );
+                        setMousePos({ x: event.clientX, y: event.clientY });
+                      }
+                    : undefined
+                }
+                onMouseLeave={
+                  showHoverCard ? () => { setHoveredIndex(null); setMousePos(null); } : undefined
+                }
               >
-                <defs>{defs}</defs>
-                <line
-                  x1="0"
-                  y1={zeroY}
-                  x2={plotWidth}
-                  y2={zeroY}
-                  stroke={chartTokens.neutral.stoneLight}
-                  strokeWidth="1"
-                />
-                {marks}
-                {labels}
-              </svg>
+                <svg
+                  width={plotWidth}
+                  height={plotHeight}
+                  viewBox={`0 0 ${plotWidth} ${plotHeight}`}
+                  role="img"
+                  aria-label={title}
+                  style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+                >
+                  <defs>{defs}</defs>
+                  {showHoverCard && hoveredIndex !== null ? (
+                    <rect
+                      x={hoveredIndex * categoryWidth}
+                      y={0}
+                      width={categoryWidth}
+                      height={plotHeight}
+                      fill={chartTokens.neutral.surfaceTint}
+                      opacity={0.4}
+                    />
+                  ) : null}
+                  <line
+                    x1="0"
+                    y1={zeroY}
+                    x2={plotWidth}
+                    y2={zeroY}
+                    stroke={chartTokens.neutral.stoneLight}
+                    strokeWidth="1"
+                  />
+                  {marks}
+                  {labels}
+                </svg>
+                {showHoverCard && hoveredIndex !== null ? (
+                  <ChartHoverCardV3
+                    title={categories[hoveredIndex]}
+                    rows={hoveredRows}
+                    totalLabel={layout === 'stacked' ? 'Total' : undefined}
+                    totalValue={
+                      typeof hoveredStackTotal === 'number'
+                        ? formatTooltipValue(hoveredStackTotal)
+                        : undefined
+                    }
+                    left={hoverCardPosition?.left ?? 12}
+                    top={hoverCardPosition?.top ?? 12}
+                  />
+                ) : null}
+              </div>
             </div>
             <div
               style={{

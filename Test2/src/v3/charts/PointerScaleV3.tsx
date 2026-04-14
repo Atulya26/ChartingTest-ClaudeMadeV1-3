@@ -1,7 +1,16 @@
+import { useState } from 'react';
+
 import { chartTokens } from '../../theme/tokens';
+import { ChartHoverCardV3 } from '../components/ChartHoverCardV3';
 import { ChartShellV3 } from '../components/ChartShellV3';
 import type { LegendPositionV3, PointerScaleRangeV3, V3HeaderProps } from '../types';
-import { clamp, getPointerScaleStops } from '../utils';
+import {
+  clamp,
+  formatTooltipValue,
+  getEstimatedHoverCardHeight,
+  getViewportHoverCardPosition,
+  getPointerScaleStops
+} from '../utils';
 
 export interface PointerScaleV3Props extends V3HeaderProps {
   title?: string;
@@ -18,12 +27,13 @@ export interface PointerScaleV3Props extends V3HeaderProps {
   legendPosition?: LegendPositionV3;
   ranges?: PointerScaleRangeV3[];
   centerLabel?: string;
+  showHoverCard?: boolean;
 }
 
 const defaultScaleRanges: PointerScaleRangeV3[] = [
-  { from: 0, to: 33.33, color: chartTokens.sequential.red.dark, label: 'Low' },
-  { from: 33.33, to: 66.66, color: chartTokens.sequential.warning.default, label: 'Medium' },
-  { from: 66.66, to: 100, color: chartTokens.sequential.success.dark, label: 'High' }
+  { from: 0, to: 35, color: chartTokens.sequential.default.lightest, label: 'Low' },
+  { from: 35, to: 70, color: chartTokens.sequential.default.default, label: 'Medium' },
+  { from: 70, to: 100, color: chartTokens.sequential.default.darker, label: 'High' }
 ];
 
 export function PointerScaleV3({
@@ -41,12 +51,48 @@ export function PointerScaleV3({
   legendPosition = 'bottom',
   ranges = defaultScaleRanges,
   centerLabel,
+  showHoverCard = false,
   ...headerProps
 }: PointerScaleV3Props) {
+  const [hovered, setHovered] = useState(false);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const stops = getPointerScaleStops(ranges);
   const clampedValue = clamp(value, min, max);
   const clampedTarget =
     typeof target === 'number' ? clamp(target, min, max) : undefined;
+  const activeRange =
+    ranges.find((range) => clampedValue >= range.from && clampedValue <= range.to) ??
+    ranges[ranges.length - 1];
+  const valueRatio = (clampedValue - min) / (max - min || 1);
+  const hoverRows = [
+    {
+      label: 'Current',
+      value: centerLabel ?? formatTooltipValue(clampedValue),
+      color: activeRange.color,
+      marker: 'solid' as const
+    },
+    {
+      label: 'Band',
+      value: activeRange.label ?? `${activeRange.from}-${activeRange.to}`,
+      color: activeRange.color,
+      marker: 'solid' as const
+    },
+    ...(typeof clampedTarget === 'number'
+      ? [
+          {
+            label: 'Target',
+            value: formatTooltipValue(clampedTarget)
+          }
+        ]
+      : []),
+    {
+      label: 'Scale',
+      value: `${min} - ${max}`
+    }
+  ];
+  const hoverCardPosition = mousePos
+    ? getViewportHoverCardPosition(mousePos.x, mousePos.y, 196, getEstimatedHoverCardHeight(hoverRows.length))
+    : null;
 
   const legendItems = showLegend ? ranges.map(range => ({
     label: range.label ?? `${range.from}-${range.to}`,
@@ -67,7 +113,12 @@ export function PointerScaleV3({
       legendPosition={legendPosition}
       {...headerProps}
     >
-      <div className="cl-v3-pointer">
+      <div
+        className="cl-v3-pointer"
+        style={{ position: 'relative' }}
+        onMouseMove={showHoverCard ? (event) => { setHovered(true); setMousePos({ x: event.clientX, y: event.clientY }); } : undefined}
+        onMouseLeave={showHoverCard ? () => { setHovered(false); setMousePos(null); } : undefined}
+      >
         <div className="cl-v3-pointer__value">{centerLabel ?? `${Math.round(clampedValue)}`}</div>
         <div className="cl-v3-pointer__track">
           {stops.map((stop) => (
@@ -115,6 +166,14 @@ export function PointerScaleV3({
           <span>{min}</span>
           <span>{max}</span>
         </div>
+        {showHoverCard && hovered ? (
+          <ChartHoverCardV3
+            title={title}
+            rows={hoverRows}
+            left={hoverCardPosition?.left ?? 0}
+            top={hoverCardPosition?.top ?? 0}
+          />
+        ) : null}
       </div>
     </ChartShellV3>
   );

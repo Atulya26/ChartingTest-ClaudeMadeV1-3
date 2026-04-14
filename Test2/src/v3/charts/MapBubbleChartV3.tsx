@@ -6,6 +6,7 @@ import statesAtlas from 'us-atlas/states-10m.json';
 import { feature } from 'topojson-client';
 
 import { chartTokens } from '../../theme/tokens';
+import { ChartHoverCardV3 } from '../components/ChartHoverCardV3';
 import { ChartShellV3 } from '../components/ChartShellV3';
 import { getStateFipsFromCode } from '../mapMetadata';
 import type {
@@ -19,7 +20,11 @@ import type {
 } from '../types';
 import {
   buildLegendItemsFromBubbles,
+  formatTooltipValue,
+  getEstimatedHoverCardHeight,
+  getViewportHoverCardPosition,
   getSvgFillDefinition,
+  resolveFillLegendMarker,
   resolveFillStyle
 } from '../utils';
 
@@ -92,6 +97,7 @@ export interface MapBubbleChartV3Props extends V3HeaderProps {
   borderColor?: string;
   showCountyLines?: boolean;
   showBubbleShadow?: boolean;
+  showHoverCard?: boolean;
 }
 
 export function MapBubbleChartV3({
@@ -118,10 +124,11 @@ export function MapBubbleChartV3({
   legendMarker = 'auto',
   bubbleStyle = 'both',
   backgroundFill = chartTokens.neutral.surfaceTint,
-  landFill = '#ffffff',
+  landFill = chartTokens.neutral.stoneLightest,
   borderColor = chartTokens.neutral.stoneLight,
   showCountyLines = true,
   showBubbleShadow = true,
+  showHoverCard = false,
   ...headerProps
 }: MapBubbleChartV3Props) {
   const { actions: userActions = [], ...restHeaderProps } = headerProps;
@@ -130,6 +137,15 @@ export function MapBubbleChartV3({
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredBubble, setHoveredBubble] = useState<{
+    point: MapBubblePointV3;
+    x: number;
+    y: number;
+    color: string;
+    stroke?: string;
+    marker: 'solid' | 'solid-texture';
+  } | null>(null);
 
   const handleZoomIn = useCallback(() => setZoomLevel(z => Math.min(z + 0.5, 4)), []);
   const handleZoomOut = useCallback(() => setZoomLevel(z => Math.max(z - 0.5, 1)), []);
@@ -223,6 +239,41 @@ export function MapBubbleChartV3({
       point.legendLabel ?? 'Dataset',
       point.value
     ]);
+  const hoveredRows =
+    hoveredBubble?.point.details?.length
+      ? hoveredBubble.point.details.map((detail, index) => ({
+          label: detail.label,
+          value:
+            typeof detail.value === 'number'
+              ? formatTooltipValue(detail.value)
+              : detail.value,
+          ...(index === 0
+            ? {
+                color: hoveredBubble.color,
+                strokeColor: hoveredBubble.stroke,
+                marker: hoveredBubble.marker
+              }
+            : {})
+        }))
+      : hoveredBubble
+        ? [
+            {
+              label: hoveredBubble.point.legendLabel ?? 'Dataset',
+              value: hoveredBubble.point.stateCode ?? 'US',
+              color: hoveredBubble.color,
+              strokeColor: hoveredBubble.stroke,
+              marker: hoveredBubble.marker
+            },
+            {
+              label: 'Value',
+              value: formatTooltipValue(hoveredBubble.point.value)
+            }
+          ]
+        : [];
+  const hoverCardPosition =
+    hoveredBubble && mousePos
+      ? getViewportHoverCardPosition(mousePos.x, mousePos.y, 196, getEstimatedHoverCardHeight(hoveredRows.length))
+      : null;
 
   return (
     <ChartShellV3
@@ -257,19 +308,24 @@ export function MapBubbleChartV3({
           </tbody>
         </table>
       ) : (
-        <svg
-          width={plotWidth}
-          height={plotHeight}
-          viewBox={`0 0 ${plotWidth} ${plotHeight}`}
-          role="img"
-          aria-label={title}
-          className="cl-v3-map"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          style={{ cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
-        >
+        <div style={{ position: 'relative', width: plotWidth }}>
+          <svg
+            width={plotWidth}
+            height={plotHeight}
+            viewBox={`0 0 ${plotWidth} ${plotHeight}`}
+            role="img"
+            aria-label={title}
+            className="cl-v3-map"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={() => {
+              handleMouseUp();
+              setHoveredBubble(null);
+              setMousePos(null);
+            }}
+            style={{ cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+          >
           <defs>
             <filter id="map-bubble-shadow" x="-50%" y="-50%" width="200%" height="200%">
               <feDropShadow
@@ -399,11 +455,45 @@ export function MapBubbleChartV3({
                   strokeWidth={resolvedBubbleStyle === 'filled' ? 0 : 2}
                   opacity={point.active === false ? 0.4 : 1.0}
                   filter={showBubbleShadow ? 'url(#map-bubble-shadow)' : undefined}
+                  onMouseMove={
+                    showHoverCard
+                      ? (event) => {
+                          const svgRect =
+                            event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+
+                          if (!svgRect) {
+                            return;
+                          }
+
+                          setMousePos({ x: event.clientX, y: event.clientY });
+                          setHoveredBubble({
+                            point,
+                            x: event.clientX - svgRect.left,
+                            y: event.clientY - svgRect.top,
+                            color: resolvedFill,
+                            stroke: resolvedStroke,
+                            marker: resolveFillLegendMarker(
+                              resolvedFillStyle,
+                              legendMarker
+                            ) as 'solid' | 'solid-texture'
+                          });
+                        }
+                      : undefined
+                  }
                 />
               );
             })}
           </g>
         </svg>
+          {showHoverCard && hoveredBubble ? (
+            <ChartHoverCardV3
+              title={hoveredBubble.point.label}
+              rows={hoveredRows}
+              left={hoverCardPosition?.left ?? 12}
+              top={hoverCardPosition?.top ?? 12}
+            />
+          ) : null}
+        </div>
       )}
     </ChartShellV3>
   );

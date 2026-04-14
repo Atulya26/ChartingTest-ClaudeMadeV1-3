@@ -11,6 +11,7 @@ import {
   fillStyleLabels,
   fillStyleOptions,
   hiddenEventArgTypes,
+  hoverCardArg,
   rangeArg,
   selectArg,
   surfaceArgTypes,
@@ -53,6 +54,7 @@ const meta = {
       'select',
       fillLegendMarkerLabels
     ),
+    showHoverCard: hoverCardArg(),
     labelMode: selectArg(
       ['value', 'percent', 'label', 'label-percent'],
       'Finite label content choice for outside labels.',
@@ -92,12 +94,13 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: 'Pie Chart Example',
+    title: 'Revenue Goal',
     segments: v3DonutSegments,
     centerLabel: '100M',
     centerSubLabel: 'Target',
     legendPosition: 'bottom',
     showLegend: true,
+    showHoverCard: false,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true
   }
@@ -105,12 +108,13 @@ export const Default: Story = {
 
 export const LabelsHidden: Story = {
   args: {
-    title: 'Care Setting Mix',
+    title: 'Revenue Goal',
     segments: v3DonutSegments,
     showLabels: false,
     centerLabel: '100M',
     centerSubLabel: 'Target',
     showLegend: true,
+    showHoverCard: false,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true
   }
@@ -118,12 +122,13 @@ export const LabelsHidden: Story = {
 
 export const LegendTop: Story = {
   args: {
-    title: 'Pie Chart Example',
+    title: 'Revenue Goal',
     segments: v3DonutSegments,
     centerLabel: '100M',
     centerSubLabel: 'Target',
     legendPosition: 'top',
     showLegend: true,
+    showHoverCard: false,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true
   }
@@ -131,12 +136,13 @@ export const LegendTop: Story = {
 
 export const LegendBottom: Story = {
   args: {
-    title: 'Pie Chart Example',
+    title: 'Revenue Goal',
     segments: v3DonutSegments,
     centerLabel: '100M',
     centerSubLabel: 'Target',
     legendPosition: 'bottom',
     showLegend: true,
+    showHoverCard: false,
     actions: [{ id: 'save-image', label: 'Save', onClick: () => {} }],
     showMenu: true
   }

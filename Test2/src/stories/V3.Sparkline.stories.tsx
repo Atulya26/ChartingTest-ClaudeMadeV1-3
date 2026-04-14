@@ -1,11 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 import { SparklineV3 } from '../v3/charts/SparklineV3';
-import { v3SparklineValues } from './storyData';
+import { v3SparklineLabels, v3SparklineValues } from './storyData';
 import {
   advancedDataArg,
   baseDocNote,
   colorArg,
+  hoverCardArg,
   rangeArg,
   v3MetaParameters
 } from './v3Storybook';
@@ -26,6 +27,8 @@ const meta = {
   },
   argTypes: {
     values: advancedDataArg('Advanced sparkline values. Hidden from controls because raw array editing is not a good default experience.'),
+    labels: advancedDataArg('Advanced sparkline labels used by the hover helper card.'),
+    showHoverCard: hoverCardArg(),
     width: rangeArg('Numeric sparkline width in pixels.', 'Layout', { min: 40, max: 200, step: 4 }),
     height: rangeArg('Numeric sparkline height in pixels.', 'Layout', { min: 16, max: 80, step: 2 }),
     strokeWidth: rangeArg('Numeric line width in pixels.', 'Style', { min: 1, max: 6, step: 0.5 }),
@@ -39,6 +42,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    values: v3SparklineValues
+    values: v3SparklineValues,
+    labels: v3SparklineLabels,
+    showHoverCard: false
   }
 };
